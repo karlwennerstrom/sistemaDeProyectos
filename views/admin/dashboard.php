@@ -1,913 +1,803 @@
 <?php
 // Configurar variables para el layout
 $page_header = true;
-$page_description = 'Panel de control y estadísticas del sistema de aprobación';
-$additional_css = ['/public/assets/css/dashboard.css', '/public/assets/css/charts.css'];
-$additional_js = ['/public/assets/js/charts.js', '/public/assets/js/dashboard.js'];
+$page_description = 'Panel de control de mis proyectos y documentos';
+$additional_css = ['/public/assets/css/dashboard.css', '/public/assets/css/client.css'];
+$additional_js = ['/public/assets/js/charts.js', '/public/assets/js/client-dashboard.js'];
 
 $breadcrumb = [
-    ['text' => 'Administración', 'url' => '/admin'],
-    ['text' => 'Dashboard', 'url' => '/admin/dashboard']
+    ['text' => 'Dashboard', 'url' => '/client/dashboard']
 ];
+
+$page_actions = '
+    <a href="/client/projects/new" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i>Nuevo Proyecto
+    </a>
+';
 ?>
 
 <?php include '../layouts/header.php'; ?>
 
 <div class="container-fluid py-4">
     
-    <!-- Alertas del sistema -->
-    <?php if (!empty($alerts)): ?>
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="alert-section">
-                    <?php foreach ($alerts as $alert): ?>
-                        <div class="alert alert-<?= $alert['type'] === 'error' ? 'danger' : $alert['type'] ?> alert-dismissible fade show" role="alert">
-                            <i class="fas fa-<?= $alert['type'] === 'warning' ? 'exclamation-triangle' : ($alert['type'] === 'error' ? 'times-circle' : 'info-circle') ?> me-2"></i>
-                            <strong><?= htmlspecialchars($alert['message']) ?></strong>
-                            <?php if (isset($alert['action'])): ?>
-                                <a href="<?= $alert['action'] ?>" class="alert-link ms-2">Ver detalles</a>
-                            <?php endif; ?>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <!-- Saludo personalizado -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="welcome-section bg-gradient-primary text-white rounded-3 p-4">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2 class="welcome-title mb-2">
+                            ¡Bienvenido, <?= htmlspecialchars($current_user->first_name) ?>!
+                        </h2>
+                        <p class="welcome-subtitle mb-0 opacity-90">
+                            Gestiona tus proyectos y da seguimiento a su proceso de aprobación
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <div class="welcome-stats">
+                            <div class="stat-item">
+                                <span class="stat-number"><?= $user_stats['total_projects'] ?></span>
+                                <span class="stat-label">Proyectos</span>
+                            </div>
                         </div>
-                    <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
         </div>
-    <?php endif; ?>
+    </div>
     
-    <!-- Métricas principales -->
+    <!-- Resumen de proyectos -->
     <div class="row mb-4">
-        <!-- Total de Usuarios -->
+        <!-- Proyectos Activos -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="card border-0 shadow-sm h-100 project-card active">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
-                            <h6 class="text-muted text-uppercase mb-1">Total Usuarios</h6>
-                            <h2 class="mb-0 text-primary"><?= number_format($stats['total_users']) ?></h2>
-                            <small class="text-success">
-                                <i class="fas fa-arrow-up me-1"></i>
-                                +<?= $stats['recent_registrations'] ?> esta semana
+                            <h6 class="text-muted text-uppercase mb-1">Proyectos Activos</h6>
+                            <h2 class="mb-0 text-primary"><?= $user_stats['active_projects'] ?></h2>
+                            <small class="text-muted">
+                                <i class="fas fa-play me-1"></i>
+                                En progreso y revisión
                             </small>
                         </div>
                         <div class="icon-circle bg-primary bg-opacity-10">
-                            <i class="fas fa-users text-primary"></i>
+                            <i class="fas fa-rocket text-primary"></i>
                         </div>
                     </div>
                 </div>
                 <div class="card-footer bg-transparent border-0 pt-0">
-                    <a href="/admin/users" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-eye me-1"></i>Ver todos
+                    <a href="/client/projects?status=in_progress,under_review" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-eye me-1"></i>Ver activos
                     </a>
                 </div>
             </div>
         </div>
         
-        <!-- Total de Proyectos -->
+        <!-- Borradores -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="card border-0 shadow-sm h-100 project-card draft">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
-                            <h6 class="text-muted text-uppercase mb-1">Total Proyectos</h6>
-                            <h2 class="mb-0 text-info"><?= number_format($stats['total_projects']) ?></h2>
-                            <small class="text-info">
-                                <i class="fas fa-play me-1"></i>
-                                <?= $stats['active_projects'] ?> activos
+                            <h6 class="text-muted text-uppercase mb-1">Borradores</h6>
+                            <h2 class="mb-0 text-secondary"><?= $user_stats['draft_projects'] ?></h2>
+                            <small class="text-muted">
+                                <i class="fas fa-edit me-1"></i>
+                                Pendientes de envío
                             </small>
                         </div>
-                        <div class="icon-circle bg-info bg-opacity-10">
-                            <i class="fas fa-project-diagram text-info"></i>
+                        <div class="icon-circle bg-secondary bg-opacity-10">
+                            <i class="fas fa-file-alt text-secondary"></i>
                         </div>
                     </div>
                 </div>
                 <div class="card-footer bg-transparent border-0 pt-0">
-                    <a href="/admin/projects" class="btn btn-sm btn-outline-info">
-                        <i class="fas fa-eye me-1"></i>Ver todos
+                    <a href="/client/projects?status=draft" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-eye me-1"></i>Ver borradores
                     </a>
                 </div>
             </div>
         </div>
         
-        <!-- Pendientes de Revisión -->
+        <!-- Feedback Pendiente -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="card border-0 shadow-sm h-100 project-card feedback">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
-                            <h6 class="text-muted text-uppercase mb-1">Pendientes Revisión</h6>
-                            <h2 class="mb-0 text-warning"><?= number_format($stats['pending_reviews']) ?></h2>
-                            <small class="text-muted">
-                                <i class="fas fa-clock me-1"></i>
-                                Requieren atención
+                            <h6 class="text-muted text-uppercase mb-1">Feedback Pendiente</h6>
+                            <h2 class="mb-0 text-warning"><?= $user_stats['pending_feedback'] ?></h2>
+                            <small class="text-warning">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                Requiere atención
                             </small>
                         </div>
                         <div class="icon-circle bg-warning bg-opacity-10">
-                            <i class="fas fa-clock text-warning"></i>
+                            <i class="fas fa-comments text-warning"></i>
                         </div>
                     </div>
                 </div>
                 <div class="card-footer bg-transparent border-0 pt-0">
-                    <a href="/admin/projects?status=under_review" class="btn btn-sm btn-outline-warning">
-                        <i class="fas fa-eye me-1"></i>Revisar
+                    <a href="/client/feedback?status=open" class="btn btn-sm btn-outline-warning">
+                        <i class="fas fa-eye me-1"></i>Ver feedback
                     </a>
                 </div>
             </div>
         </div>
         
-        <!-- Total de Documentos -->
+        <!-- Proyectos Aprobados -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="card border-0 shadow-sm h-100 project-card approved">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
-                            <h6 class="text-muted text-uppercase mb-1">Total Documentos</h6>
-                            <h2 class="mb-0 text-success"><?= number_format($stats['total_documents']) ?></h2>
-                            <small class="text-muted">
-                                <i class="fas fa-comments me-1"></i>
-                                <?= $stats['total_feedback'] ?> comentarios
+                            <h6 class="text-muted text-uppercase mb-1">Aprobados</h6>
+                            <h2 class="mb-0 text-success"><?= $user_stats['approved_projects'] ?></h2>
+                            <small class="text-success">
+                                <i class="fas fa-check-circle me-1"></i>
+                                Completados
                             </small>
                         </div>
                         <div class="icon-circle bg-success bg-opacity-10">
-                            <i class="fas fa-file-alt text-success"></i>
+                            <i class="fas fa-check text-success"></i>
                         </div>
                     </div>
                 </div>
                 <div class="card-footer bg-transparent border-0 pt-0">
-                    <a href="/admin/documents" class="btn btn-sm btn-outline-success">
-                        <i class="fas fa-eye me-1"></i>Ver todos
+                    <a href="/client/projects?status=approved" class="btn btn-sm btn-outline-success">
+                        <i class="fas fa-eye me-1"></i>Ver aprobados
                     </a>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Gráficos y estadísticas -->
+    <!-- Proyectos recientes y progreso -->
     <div class="row mb-4">
-        <!-- Proyectos por Estado -->
-        <div class="col-xl-6 col-lg-12 mb-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-transparent border-0">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Proyectos por Estado</h5>
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-ellipsis-v"></i>
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="/admin/reports?type=projects">Ver reporte completo</a></li>
-                                <li><a class="dropdown-item" href="#" onclick="exportChart('projects-status-chart')">Exportar gráfico</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <canvas id="projects-status-chart" height="200"></canvas>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Proyectos por Área -->
-        <div class="col-xl-6 col-lg-12 mb-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-transparent border-0">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Distribución por Área</h5>
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-ellipsis-v"></i>
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="/admin/areas/overview">Ver detalles por área</a></li>
-                                <li><a class="dropdown-item" href="#" onclick="exportChart('projects-area-chart')">Exportar gráfico</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <canvas id="projects-area-chart" height="200"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Actividad Reciente y Estado del Sistema -->
-    <div class="row mb-4">
-        <!-- Actividad Reciente -->
+        <!-- Mis Proyectos Recientes -->
         <div class="col-xl-8 col-lg-12 mb-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-transparent border-0">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Actividad Reciente</h5>
-                        <a href="/admin/activity" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-history me-1"></i>Ver todo
+                        <h5 class="card-title mb-0">Mis Proyectos Recientes</h5>
+                        <a href="/client/projects" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-list me-1"></i>Ver todos
                         </a>
                     </div>
                 </div>
                 <div class="card-body p-0">
-                    <div class="activity-feed">
-                        
-                        <!-- Proyectos recientes -->
-                        <?php if (!empty($recent_activity['recent_projects'])): ?>
-                            <div class="activity-section">
-                                <h6 class="activity-section-title">
-                                    <i class="fas fa-project-diagram me-2"></i>Proyectos Recientes
-                                </h6>
-                                <?php foreach (array_slice($recent_activity['recent_projects'], 0, 3) as $project): ?>
-                                    <div class="activity-item">
-                                        <div class="activity-icon bg-primary bg-opacity-10">
-                                            <i class="fas fa-plus text-primary"></i>
-                                        </div>
-                                        <div class="activity-content">
-                                            <div class="activity-title">
-                                                <a href="/admin/projects/<?= $project->id ?>" class="text-decoration-none">
-                                                    <?= htmlspecialchars($project->name) ?>
-                                                </a>
+                    <?php if (!empty($recent_projects)): ?>
+                        <div class="projects-list">
+                            <?php foreach ($recent_projects as $project): ?>
+                                <div class="project-item">
+                                    <div class="project-content">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="project-info">
+                                                <h6 class="project-title">
+                                                    <a href="/client/projects/<?= $project->id ?>" class="text-decoration-none">
+                                                        <?= htmlspecialchars($project->name) ?>
+                                                    </a>
+                                                </h6>
+                                                <p class="project-description text-muted mb-2">
+                                                    <?= htmlspecialchars(substr($project->description, 0, 100)) ?>...
+                                                </p>
+                                                <div class="project-meta">
+                                                    <span class="badge bg-<?= $project->status === 'approved' ? 'success' : ($project->status === 'rejected' ? 'danger' : ($project->status === 'under_review' ? 'warning' : 'secondary')) ?>">
+                                                        <?= ucfirst(str_replace('_', ' ', $project->status)) ?>
+                                                    </span>
+                                                    <small class="text-muted ms-2">
+                                                        <i class="fas fa-calendar me-1"></i>
+                                                        <?= date('d/m/Y', strtotime($project->updated_at)) ?>
+                                                    </small>
+                                                </div>
                                             </div>
-                                            <div class="activity-meta">
-                                                <span class="badge bg-<?= $project->status === 'approved' ? 'success' : ($project->status === 'rejected' ? 'danger' : 'warning') ?>">
-                                                    <?= ucfirst($project->status) ?>
-                                                </span>
-                                                <small class="text-muted ms-2">
-                                                    <?= date('d/m/Y H:i', strtotime($project->created_at)) ?>
-                                                </small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
-                        
-                        <!-- Documentos recientes -->
-                        <?php if (!empty($recent_activity['recent_documents'])): ?>
-                            <div class="activity-section">
-                                <h6 class="activity-section-title">
-                                    <i class="fas fa-file-upload me-2"></i>Documentos Recientes
-                                </h6>
-                                <?php foreach (array_slice($recent_activity['recent_documents'], 0, 3) as $document): ?>
-                                    <div class="activity-item">
-                                        <div class="activity-icon bg-info bg-opacity-10">
-                                            <i class="fas fa-file text-info"></i>
-                                        </div>
-                                        <div class="activity-content">
-                                            <div class="activity-title">
-                                                <?= htmlspecialchars($document->original_name) ?>
-                                            </div>
-                                            <div class="activity-meta">
-                                                <span class="badge bg-<?= $document->status === 'approved' ? 'success' : ($document->status === 'rejected' ? 'danger' : 'secondary') ?>">
-                                                    <?= ucfirst($document->status) ?>
-                                                </span>
-                                                <small class="text-muted ms-2">
-                                                    <?= date('d/m/Y H:i', strtotime($document->created_at)) ?>
-                                                </small>
+                                            <div class="project-actions">
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="/client/projects/<?= $project->id ?>" 
+                                                       class="btn btn-outline-primary" 
+                                                       title="Ver detalles">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <?php if ($project->status === 'draft'): ?>
+                                                        <a href="/client/projects/<?= $project->id ?>/edit" 
+                                                           class="btn btn-outline-secondary" 
+                                                           title="Editar">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                    <?php endif; ?>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
-                        
-                        <!-- Feedback reciente -->
-                        <?php if (!empty($recent_activity['recent_feedback'])): ?>
-                            <div class="activity-section">
-                                <h6 class="activity-section-title">
-                                    <i class="fas fa-comments me-2"></i>Feedback Reciente
-                                </h6>
-                                <?php foreach (array_slice($recent_activity['recent_feedback'], 0, 3) as $feedback): ?>
-                                    <div class="activity-item">
-                                        <div class="activity-icon bg-warning bg-opacity-10">
-                                            <i class="fas fa-comment text-warning"></i>
-                                        </div>
-                                        <div class="activity-content">
-                                            <div class="activity-title">
-                                                <?= htmlspecialchars(substr($feedback->message, 0, 50)) ?>...
-                                            </div>
-                                            <div class="activity-meta">
-                                                <span class="badge bg-<?= $feedback->priority === 'critical' ? 'danger' : ($feedback->priority === 'high' ? 'warning' : 'info') ?>">
-                                                    <?= ucfirst($feedback->priority) ?>
-                                                </span>
-                                                <small class="text-muted ms-2">
-                                                    <?= date('d/m/Y H:i', strtotime($feedback->created_at)) ?>
-                                                </small>
+                                        
+                                        <!-- Progreso por áreas -->
+                                        <div class="project-progress mt-3">
+                                            <div class="row">
+                                                <?php 
+                                                $project_areas = json_decode($project->areas, true) ?? [];
+                                                $progress_data = $project->getAreaProgress();
+                                                ?>
+                                                <?php foreach ($project_areas as $area): ?>
+                                                    <?php 
+                                                    $area_name = \UC\ApprovalSystem\Utils\Helper::getAreaName($area);
+                                                    $area_progress = $progress_data[$area] ?? ['status' => 'pending', 'progress' => 0];
+                                                    ?>
+                                                    <div class="col-md-3 col-6 mb-2">
+                                                        <div class="area-progress-item">
+                                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                <small class="text-muted"><?= htmlspecialchars($area_name) ?></small>
+                                                                <small class="progress-percentage"><?= $area_progress['progress'] ?>%</small>
+                                                            </div>
+                                                            <div class="progress" style="height: 4px;">
+                                                                <div class="progress-bar bg-<?= $area_progress['status'] === 'approved' ? 'success' : ($area_progress['status'] === 'rejected' ? 'danger' : ($area_progress['status'] === 'in_review' ? 'warning' : 'secondary')) ?>" 
+                                                                     style="width: <?= $area_progress['progress'] ?>%"></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                <?php endforeach; ?>
                                             </div>
                                         </div>
                                     </div>
-                                <?php endforeach; ?>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="empty-state text-center py-5">
+                            <div class="empty-icon mb-3">
+                                <i class="fas fa-project-diagram text-muted" style="font-size: 3rem;"></i>
                             </div>
-                        <?php endif; ?>
-                    </div>
+                            <h6 class="text-muted">No tienes proyectos aún</h6>
+                            <p class="text-muted mb-3">Crea tu primer proyecto para comenzar</p>
+                            <a href="/client/projects/new" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i>Crear Proyecto
+                            </a>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
         
-        <!-- Estado del Sistema -->
+        <!-- Panel de acciones y tips -->
         <div class="col-xl-4 col-lg-12 mb-4">
-            <div class="card border-0 shadow-sm h-100">
+            <!-- Acciones rápidas -->
+            <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-transparent border-0">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Estado del Sistema</h5>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="refreshSystemHealth()">
-                            <i class="fas fa-sync-alt me-1"></i>Actualizar
-                        </button>
-                    </div>
+                    <h5 class="card-title mb-0">Acciones Rápidas</h5>
                 </div>
                 <div class="card-body">
-                    <div class="system-health-items">
-                        
-                        <!-- Base de Datos -->
-                        <div class="health-item">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <div class="health-indicator bg-<?= $system_health['database']['status'] === 'ok' ? 'success' : 'danger' ?>"></div>
-                                    <span class="ms-2">Base de Datos</span>
-                                </div>
-                                <small class="text-<?= $system_health['database']['status'] === 'ok' ? 'success' : 'danger' ?>">
-                                    <?= $system_health['database']['status'] === 'ok' ? 'Operativa' : 'Error' ?>
-                                </small>
-                            </div>
-                        </div>
-                        
-                        <!-- Sistema de Archivos -->
-                        <div class="health-item">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <div class="health-indicator bg-<?= $system_health['file_system']['status'] === 'ok' ? 'success' : 'danger' ?>"></div>
-                                    <span class="ms-2">Sistema de Archivos</span>
-                                </div>
-                                <small class="text-<?= $system_health['file_system']['status'] === 'ok' ? 'success' : 'danger' ?>">
-                                    <?= $system_health['file_system']['status'] === 'ok' ? 'Operativo' : 'Error' ?>
-                                </small>
-                            </div>
-                        </div>
-                        
-                        <!-- Servicio de Email -->
-                        <div class="health-item">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <div class="health-indicator bg-<?= $system_health['email_service']['status'] === 'ok' ? 'success' : 'danger' ?>"></div>
-                                    <span class="ms-2">Servicio de Email</span>
-                                </div>
-                                <small class="text-<?= $system_health['email_service']['status'] === 'ok' ? 'success' : 'danger' ?>">
-                                    <?= $system_health['email_service']['status'] === 'ok' ? 'Operativo' : 'Error' ?>
-                                </small>
-                            </div>
-                        </div>
-                        
-                        <!-- Espacio en Disco -->
-                        <div class="health-item">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <div class="health-indicator bg-<?= $system_health['disk_space']['usage_percent'] < 85 ? 'success' : 'warning' ?>"></div>
-                                    <span class="ms-2">Espacio en Disco</span>
-                                </div>
-                                <small class="text-<?= $system_health['disk_space']['usage_percent'] < 85 ? 'success' : 'warning' ?>">
-                                    <?= $system_health['disk_space']['usage_percent'] ?>% usado
-                                </small>
-                            </div>
-                            <div class="progress mt-2" style="height: 4px;">
-                                <div class="progress-bar bg-<?= $system_health['disk_space']['usage_percent'] < 85 ? 'success' : 'warning' ?>" 
-                                     style="width: <?= $system_health['disk_space']['usage_percent'] ?>%"></div>
-                            </div>
-                        </div>
+                    <div class="d-grid gap-2">
+                        <a href="/client/projects/new" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Nuevo Proyecto
+                        </a>
+                        <a href="/client/documents/upload" class="btn btn-outline-primary">
+                            <i class="fas fa-upload me-2"></i>Subir Documento
+                        </a>
+                        <a href="/client/feedback" class="btn btn-outline-warning">
+                            <i class="fas fa-comments me-2"></i>Ver Feedback
+                        </a>
                     </div>
-                    
-                    <!-- Métricas adicionales -->
-                    <div class="mt-4">
-                        <h6 class="text-muted mb-3">Métricas de Rendimiento</h6>
-                        
-                        <!-- Tiempo promedio de aprobación -->
-                        <div class="metric-item mb-3">
-                            <div class="d-flex justify-content-between">
-                                <span class="text-muted">Tiempo Promedio de Aprobación</span>
-                                <span class="fw-bold"><?= $stats['avg_approval_time'] ?> días</span>
+                </div>
+            </div>
+            
+            <!-- Tips y guías -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-lightbulb text-warning me-2"></i>
+                        Tips Útiles
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="tips-list">
+                        <div class="tip-item mb-3">
+                            <div class="tip-icon">
+                                <i class="fas fa-file-check text-success"></i>
+                            </div>
+                            <div class="tip-content">
+                                <h6 class="tip-title">Documenta bien tu proyecto</h6>
+                                <p class="tip-text text-muted mb-0">
+                                    Asegúrate de incluir todos los documentos requeridos por cada área.
+                                </p>
                             </div>
                         </div>
                         
-                        <!-- Usuarios activos hoy -->
-                        <div class="metric-item mb-3">
-                            <div class="d-flex justify-content-between">
-                                <span class="text-muted">Usuarios Activos Hoy</span>
-                                <span class="fw-bold text-success">
-                                    <?= $stats['active_users_today'] ?? 0 ?>
-                                </span>
+                        <div class="tip-item mb-3">
+                            <div class="tip-icon">
+                                <i class="fas fa-clock text-info"></i>
+                            </div>
+                            <div class="tip-content">
+                                <h6 class="tip-title">Responde el feedback rápido</h6>
+                                <p class="tip-text text-muted mb-0">
+                                    Atiende los comentarios de los revisores para acelerar la aprobación.
+                                </p>
                             </div>
                         </div>
                         
-                        <!-- Última actualización -->
-                        <div class="metric-item">
-                            <div class="d-flex justify-content-between">
-                                <span class="text-muted">Última Actualización</span>
-                                <span class="fw-bold" id="last-update-time">
-                                    <?= date('H:i:s') ?>
-                                </span>
+                        <div class="tip-item">
+                            <div class="tip-icon">
+                                <i class="fas fa-users text-primary"></i>
+                            </div>
+                            <div class="tip-content">
+                                <h6 class="tip-title">Comunícate con las áreas</h6>
+                                <p class="tip-text text-muted mb-0">
+                                    Mantén comunicación fluida con los responsables de cada área.
+                                </p>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="card-footer bg-transparent border-0 pt-0">
-                    <a href="/admin/system/health" class="btn btn-sm btn-outline-primary w-100">
-                        <i class="fas fa-heartbeat me-1"></i>Ver Estado Completo
+                    <a href="/client/help/getting-started" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="fas fa-book me-1"></i>Guía Completa
                     </a>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Acciones rápidas -->
+    <!-- Estado por áreas -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-transparent border-0">
-                    <h5 class="card-title mb-0">Acciones Rápidas</h5>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Estado de Proyectos por Área</h5>
+                        <a href="/client/areas/progress" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-chart-line me-1"></i>Ver progreso completo
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <a href="/admin/users/new" class="quick-action-card">
-                                <div class="quick-action-icon bg-primary bg-opacity-10">
-                                    <i class="fas fa-user-plus text-primary"></i>
+                        <?php 
+                        $areas = \UC\ApprovalSystem\Utils\Helper::getAreas();
+                        foreach ($areas as $area_key => $area_name): 
+                            $area_stats = $area_statistics[$area_key] ?? [
+                                'total' => 0,
+                                'pending' => 0,
+                                'approved' => 0,
+                                'rejected' => 0
+                            ];
+                        ?>
+                            <div class="col-lg-3 col-md-6 mb-4">
+                                <div class="area-card">
+                                    <div class="area-header">
+                                        <h6 class="area-name"><?= htmlspecialchars($area_name) ?></h6>
+                                        <span class="area-total"><?= $area_stats['total'] ?> proyectos</span>
+                                    </div>
+                                    <div class="area-stats">
+                                        <div class="stat-row">
+                                            <span class="stat-label">Pendientes</span>
+                                            <span class="stat-value text-warning"><?= $area_stats['pending'] ?></span>
+                                        </div>
+                                        <div class="stat-row">
+                                            <span class="stat-label">Aprobados</span>
+                                            <span class="stat-value text-success"><?= $area_stats['approved'] ?></span>
+                                        </div>
+                                        <div class="stat-row">
+                                            <span class="stat-label">Rechazados</span>
+                                            <span class="stat-value text-danger"><?= $area_stats['rejected'] ?></span>
+                                        </div>
+                                    </div>
+                                    <?php if ($area_stats['total'] > 0): ?>
+                                        <div class="area-progress mt-3">
+                                            <?php $approval_rate = ($area_stats['approved'] / $area_stats['total']) * 100; ?>
+                                            <div class="d-flex justify-content-between mb-1">
+                                                <small class="text-muted">Tasa de Aprobación</small>
+                                                <small class="text-muted"><?= round($approval_rate) ?>%</small>
+                                            </div>
+                                            <div class="progress" style="height: 6px;">
+                                                <div class="progress-bar bg-success" style="width: <?= $approval_rate ?>%"></div>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+                                    <div class="area-actions mt-3">
+                                        <a href="/client/areas/<?= $area_key ?>" class="btn btn-sm btn-outline-primary w-100">
+                                            Ver detalles
+                                        </a>
+                                    </div>
                                 </div>
-                                <div class="quick-action-content">
-                                    <h6>Nuevo Usuario</h6>
-                                    <p class="text-muted mb-0">Crear cuenta de usuario</p>
-                                </div>
-                            </a>
-                        </div>
-                        
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <a href="/admin/document-templates/new" class="quick-action-card">
-                                <div class="quick-action-icon bg-success bg-opacity-10">
-                                    <i class="fas fa-file-plus text-success"></i>
-                                </div>
-                                <div class="quick-action-content">
-                                    <h6>Nueva Plantilla</h6>
-                                    <p class="text-muted mb-0">Crear plantilla de documento</p>
-                                </div>
-                            </a>
-                        </div>
-                        
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <a href="/admin/reports" class="quick-action-card">
-                                <div class="quick-action-icon bg-info bg-opacity-10">
-                                    <i class="fas fa-chart-bar text-info"></i>
-                                </div>
-                                <div class="quick-action-content">
-                                    <h6>Generar Reporte</h6>
-                                    <p class="text-muted mb-0">Crear reporte personalizado</p>
-                                </div>
-                            </a>
-                        </div>
-                        
-                        <div class="col-md-3 col-sm-6 mb-3">
-                            <a href="/admin/system/cleanup" class="quick-action-card">
-                                <div class="quick-action-icon bg-warning bg-opacity-10">
-                                    <i class="fas fa-broom text-warning"></i>
-                                </div>
-                                <div class="quick-action-content">
-                                    <h6>Limpieza Sistema</h6>
-                                    <p class="text-muted mb-0">Optimizar rendimiento</p>
-                                </div>
-                            </a>
-                        </div>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-
-<!-- Modal para exportar datos -->
-<div class="modal fade" id="exportModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Exportar Datos</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="exportForm">
-                    <div class="mb-3">
-                        <label class="form-label">Tipo de Reporte</label>
-                        <select class="form-select" name="report_type" required>
-                            <option value="">Seleccionar tipo</option>
-                            <option value="projects">Proyectos</option>
-                            <option value="users">Usuarios</option>
-                            <option value="documents">Documentos</option>
-                            <option value="feedback">Feedback</option>
-                        </select>
+    
+    <!-- Notificaciones y alertas importantes -->
+    <?php if (!empty($important_notifications)): ?>
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-transparent border-0">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-bell text-warning me-2"></i>
+                            Notificaciones Importantes
+                        </h5>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Formato</label>
-                        <select class="form-select" name="format" required>
-                            <option value="csv">CSV</option>
-                            <option value="excel">Excel</option>
-                            <option value="pdf">PDF</option>
-                        </select>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Fecha Desde</label>
-                                <input type="date" class="form-control" name="date_from">
+                    <div class="card-body">
+                        <?php foreach ($important_notifications as $notification): ?>
+                            <div class="notification-item alert alert-<?= $notification['type'] === 'urgent' ? 'danger' : ($notification['type'] === 'warning' ? 'warning' : 'info') ?> border-0">
+                                <div class="d-flex align-items-start">
+                                    <div class="notification-icon me-3">
+                                        <i class="fas fa-<?= $notification['icon'] ?? 'info-circle' ?>"></i>
+                                    </div>
+                                    <div class="notification-content flex-grow-1">
+                                        <h6 class="notification-title"><?= htmlspecialchars($notification['title']) ?></h6>
+                                        <p class="notification-message mb-2"><?= htmlspecialchars($notification['message']) ?></p>
+                                        <?php if (isset($notification['action_url'])): ?>
+                                            <a href="<?= $notification['action_url'] ?>" class="btn btn-sm btn-<?= $notification['type'] === 'urgent' ? 'danger' : ($notification['type'] === 'warning' ? 'warning' : 'info') ?>">
+                                                <?= htmlspecialchars($notification['action_text'] ?? 'Ver más') ?>
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="notification-time">
+                                        <small class="text-muted"><?= date('d/m H:i', strtotime($notification['created_at'])) ?></small>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Fecha Hasta</label>
-                                <input type="date" class="form-control" name="date_to">
-                            </div>
-                        </div>
+                        <?php endforeach; ?>
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="executeExport()">
-                    <i class="fas fa-download me-1"></i>Exportar
-                </button>
+                </div>
             </div>
         </div>
-    </div>
+    <?php endif; ?>
 </div>
 
 <script>
-// Datos para los gráficos
-const projectsStatusData = <?= json_encode($stats['projects_by_status']) ?>;
-const projectsAreaData = <?= json_encode($stats['projects_by_area']) ?>;
+// Datos para gráficos del cliente
+const userStats = <?= json_encode($user_stats) ?>;
+const areaStats = <?= json_encode($area_statistics) ?>;
 
-// Inicializar gráficos cuando se carga la página
 document.addEventListener('DOMContentLoaded', function() {
-    initializeCharts();
-    startRealTimeUpdates();
+    // Inicializar actualizaciones automáticas
+    startClientUpdates();
+    
+    // Inicializar tooltips para las barras de progreso
+    initializeProgressTooltips();
 });
 
-// Función para inicializar gráficos
-function initializeCharts() {
-    // Gráfico de proyectos por estado
-    const statusCtx = document.getElementById('projects-status-chart').getContext('2d');
-    new Chart(statusCtx, {
-        type: 'doughnut',
-        data: {
-            labels: Object.keys(projectsStatusData),
-            datasets: [{
-                data: Object.values(projectsStatusData),
-                backgroundColor: [
-                    '#6c757d', // draft
-                    '#0dcaf0', // in_progress
-                    '#ffc107', // under_review
-                    '#198754', // approved
-                    '#dc3545', // rejected
-                    '#6f42c1'  // cancelled
-                ],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 20,
-                        usePointStyle: true
-                    }
-                }
-            }
-        }
-    });
-    
-    // Gráfico de proyectos por área
-    const areaCtx = document.getElementById('projects-area-chart').getContext('2d');
-    new Chart(areaCtx, {
-        type: 'bar',
-        data: {
-            labels: Object.keys(projectsAreaData),
-            datasets: [{
-                label: 'Proyectos',
-                data: Object.values(projectsAreaData),
-                backgroundColor: '#0d6efd',
-                borderRadius: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: false
-                }
-            }
-        }
-    });
+// Función para iniciar actualizaciones del cliente
+function startClientUpdates() {
+    // Actualizar estadísticas cada 2 minutos
+    setInterval(function() {
+        updateClientStats();
+    }, 120000);
 }
 
-// Función para actualizar el estado del sistema
-function refreshSystemHealth() {
-    showLoader(true);
-    
-    fetch('/api/health')
+// Función para actualizar estadísticas del cliente
+function updateClientStats() {
+    fetch('/api/client/dashboard-stats')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                updateSystemHealthUI(data.checks);
-                showAlert('Estado del sistema actualizado', 'success');
-            } else {
-                showAlert('Error al actualizar estado del sistema', 'error');
+                updateStatsCards(data.stats);
+                updateNotifications(data.notifications);
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            showAlert('Error al conectar con el servidor', 'error');
-        })
-        .finally(() => {
-            showLoader(false);
-            updateLastUpdateTime();
+            console.warn('Error updating client stats:', error);
         });
 }
 
-// Función para actualizar la UI del estado del sistema
-function updateSystemHealthUI(checks) {
-    Object.keys(checks).forEach(key => {
-        const indicator = document.querySelector(`[data-health="${key}"] .health-indicator`);
-        if (indicator) {
-            indicator.className = `health-indicator bg-${checks[key].status === 'ok' ? 'success' : 'danger'}`;
-        }
+// Función para actualizar las tarjetas de estadísticas
+function updateStatsCards(stats) {
+    // Actualizar contadores
+    document.querySelector('[data-stat="active_projects"]').textContent = stats.active_projects;
+    document.querySelector('[data-stat="draft_projects"]').textContent = stats.draft_projects;
+    document.querySelector('[data-stat="pending_feedback"]').textContent = stats.pending_feedback;
+    document.querySelector('[data-stat="approved_projects"]').textContent = stats.approved_projects;
+}
+
+// Función para actualizar notificaciones
+function updateNotifications(notifications) {
+    // Actualizar badge de notificaciones en el header
+    const badge = document.getElementById('notification-count');
+    const unreadCount = notifications.filter(n => !n.is_read).length;
+    
+    if (unreadCount > 0) {
+        badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+        badge.style.display = 'block';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+// Función para inicializar tooltips de progreso
+function initializeProgressTooltips() {
+    const progressBars = document.querySelectorAll('.progress-bar');
+    progressBars.forEach(bar => {
+        const tooltip = new bootstrap.Tooltip(bar, {
+            title: function() {
+                return `Progreso: ${bar.style.width}`;
+            }
+        });
     });
 }
 
-// Función para actualizar el tiempo de última actualización
-function updateLastUpdateTime() {
-    const timeElement = document.getElementById('last-update-time');
-    if (timeElement) {
-        timeElement.textContent = new Date().toLocaleTimeString();
+// Función para mostrar/ocultar detalles de proyecto
+function toggleProjectDetails(projectId) {
+    const details = document.getElementById(`project-details-${projectId}`);
+    if (details.style.display === 'none') {
+        details.style.display = 'block';
+    } else {
+        details.style.display = 'none';
     }
-}
-
-// Función para iniciar actualizaciones en tiempo real
-function startRealTimeUpdates() {
-    // Actualizar cada 5 minutos
-    setInterval(function() {
-        refreshSystemHealth();
-    }, 300000);
-    
-    // Actualizar tiempo cada segundo
-    setInterval(updateLastUpdateTime, 1000);
-}
-
-// Función para exportar gráfico
-function exportChart(chartId) {
-    const canvas = document.getElementById(chartId);
-    const url = canvas.toDataURL('image/png');
-    
-    const link = document.createElement('a');
-    link.download = chartId + '_' + new Date().toISOString().slice(0, 10) + '.png';
-    link.href = url;
-    link.click();
-}
-
-// Función para ejecutar exportación
-function executeExport() {
-    const form = document.getElementById('exportForm');
-    const formData = new FormData(form);
-    
-    // Validar formulario
-    if (!formData.get('report_type') || !formData.get('format')) {
-        showAlert('Por favor completa todos los campos requeridos', 'warning');
-        return;
-    }
-    
-    showLoader(true);
-    
-    // Crear URL de descarga
-    const params = new URLSearchParams(formData);
-    const url = `/admin/reports/export?${params.toString()}`;
-    
-    // Crear descarga
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = '';
-    link.click();
-    
-    // Cerrar modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('exportModal'));
-    modal.hide();
-    
-    showLoader(false);
-    showAlert('Exportación iniciada', 'success');
 }
 </script>
 
 <style>
-/* Estilos específicos del dashboard */
-.icon-circle {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
+/* Estilos específicos del dashboard de cliente */
+.welcome-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-.activity-feed {
-    max-height: 500px;
+.welcome-stats .stat-item {
+    text-align: center;
+}
+
+.welcome-stats .stat-number {
+    display: block;
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.welcome-stats .stat-label {
+    display: block;
+    font-size: 0.875rem;
+    opacity: 0.9;
+}
+
+.project-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.project-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important;
+}
+
+.projects-list {
+    max-height: 600px;
     overflow-y: auto;
 }
 
-.activity-section {
-    padding: 1rem;
+.project-item {
+    padding: 1.5rem;
     border-bottom: 1px solid #e9ecef;
-}
-
-.activity-section:last-child {
-    border-bottom: none;
-}
-
-.activity-section-title {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #6c757d;
-    margin-bottom: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.activity-item {
-    display: flex;
-    align-items: flex-start;
-    margin-bottom: 0.75rem;
-    padding: 0.5rem;
-    border-radius: 0.375rem;
     transition: background-color 0.2s ease;
 }
 
-.activity-item:hover {
+.project-item:hover {
     background-color: #f8f9fa;
 }
 
-.activity-item:last-child {
-    margin-bottom: 0;
+.project-item:last-child {
+    border-bottom: none;
 }
 
-.activity-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 0.75rem;
-    flex-shrink: 0;
+.project-title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
 }
 
-.activity-content {
-    flex-grow: 1;
-    min-width: 0;
-}
-
-.activity-title {
-    font-weight: 500;
-    margin-bottom: 0.25rem;
-}
-
-.activity-title a {
+.project-title a {
     color: inherit;
+    transition: color 0.2s ease;
 }
 
-.activity-title a:hover {
+.project-title a:hover {
     color: #0d6efd;
 }
 
-.activity-meta {
+.project-description {
+    line-height: 1.5;
+}
+
+.project-meta {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 0.5rem;
 }
 
-.system-health-items {
+.area-progress-item {
+    padding: 0.75rem;
+    background-color: #f8f9fa;
+    border-radius: 0.375rem;
+    border: 1px solid #e9ecef;
+}
+
+.progress-percentage {
+    font-weight: 600;
+    color: #495057;
+}
+
+.empty-state {
+    padding: 3rem 1rem;
+}
+
+.empty-icon {
+    opacity: 0.5;
+}
+
+.tips-list {
     space-y: 1rem;
 }
 
-.health-item {
-    padding: 0.75rem 0;
-    border-bottom: 1px solid #e9ecef;
-}
-
-.health-item:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-}
-
-.health-indicator {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    animation: pulse 2s infinite;
-}
-
-.metric-item {
-    padding: 0.5rem 0;
-}
-
-.quick-action-card {
+.tip-item {
     display: flex;
-    align-items: center;
-    padding: 1rem;
-    border: 1px solid #dee2e6;
-    border-radius: 0.5rem;
-    text-decoration: none;
-    color: inherit;
-    transition: all 0.2s ease;
-    height: 100%;
+    align-items: flex-start;
 }
 
-.quick-action-card:hover {
-    border-color: #0d6efd;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    color: inherit;
-    text-decoration: none;
-}
-
-.quick-action-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: 0.5rem;
+.tip-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-right: 1rem;
-    font-size: 1.25rem;
+    flex-shrink: 0;
 }
 
-.quick-action-content h6 {
-    margin-bottom: 0.25rem;
+.tip-content {
+    flex-grow: 1;
+}
+
+.tip-title {
+    font-size: 0.9rem;
     font-weight: 600;
+    margin-bottom: 0.25rem;
 }
 
-.quick-action-content p {
-    font-size: 0.875rem;
-    line-height: 1.3;
+.tip-text {
+    font-size: 0.8rem;
+    line-height: 1.4;
 }
 
-/* Animaciones */
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(var(--bs-success-rgb), 0.7);
-    }
-    70% {
-        box-shadow: 0 0 0 6px rgba(var(--bs-success-rgb), 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(var(--bs-success-rgb), 0);
-    }
+.area-card {
+    padding: 1.25rem;
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    height: 100%;
+    transition: all 0.2s ease;
+}
+
+.area-card:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.area-header {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.area-name {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: #495057;
+}
+
+.area-total {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.area-stats {
+    space-y: 0.5rem;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    padding: 0.25rem 0;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.stat-value {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.notification-item {
+    margin-bottom: 1rem;
+}
+
+.notification-item:last-child {
+    margin-bottom: 0;
+}
+
+.notification-icon {
+    width: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 0.25rem;
+}
+
+.notification-title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.notification-message {
+    line-height: 1.5;
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    .quick-action-card {
+    .welcome-section {
+        text-align: center;
+    }
+    
+    .welcome-stats {
+        margin-top: 1rem;
+    }
+    
+    .project-actions {
+        margin-top: 1rem;
+    }
+    
+    .area-progress-item {
+        margin-bottom: 0.5rem;
+    }
+    
+    .tip-item {
         flex-direction: column;
         text-align: center;
     }
     
-    .quick-action-icon {
+    .tip-icon {
         margin-right: 0;
         margin-bottom: 0.75rem;
+        align-self: center;
     }
-    
-    .activity-item {
-        flex-direction: column;
-        align-items: flex-start;
+}
+
+/* Animaciones */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
     }
-    
-    .activity-icon {
-        margin-right: 0;
-        margin-bottom: 0.5rem;
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
+}
+
+.project-item {
+    animation: fadeInUp 0.3s ease;
+}
+
+.area-card {
+    animation: fadeInUp 0.3s ease;
 }
 
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
-    .activity-item:hover {
+    .project-item:hover {
         background-color: #2d3748;
     }
     
-    .quick-action-card {
+    .area-progress-item {
+        background-color: #2d3748;
         border-color: #4a5568;
     }
     
-    .quick-action-card:hover {
-        border-color: #0d6efd;
+    .area-card {
+        border-color: #4a5568;
+    }
+    
+    .area-card:hover {
         background-color: #2d3748;
     }
 }
