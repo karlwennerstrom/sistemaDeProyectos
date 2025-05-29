@@ -1,0 +1,35 @@
+# Habilitar mod_rewrite
+RewriteEngine On
+
+# Redirigir todo a public/index.php excepto archivos existentes
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ public/index.php?route=$1 [QSA,L]
+
+# Seguridad - Ocultar archivos sensibles
+<Files ".env">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+<Files "composer.json">
+    Order Allow,Deny  
+    Deny from all
+</Files>
+
+# Proteger directorio vendor
+<IfModule mod_alias.c>
+    RedirectMatch 403 /vendor/.*$
+</IfModule>
+
+# Configuración para subida de archivos
+php_value upload_max_filesize 10M
+php_value post_max_size 10M
+php_value max_execution_time 300
+
+# Configuración de headers de seguridad
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options DENY
+    Header always set X-XSS-Protection "1; mode=block"
+</IfModule>

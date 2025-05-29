@@ -1,0 +1,39 @@
+# Dependencias
+/vendor/
+/node_modules/
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+
+# Logs
+/logs/*.log
+/logs/*.txt
+
+# Archivos subidos
+/uploads/documents/*
+!/uploads/documents/.gitkeep
+/uploads/temp/*
+!/uploads/temp/.gitkeep
+
+# Cache
+/cache/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporal
+*.tmp
+*.bak
+
+# Composer
+composer.phar
+composer.lock
